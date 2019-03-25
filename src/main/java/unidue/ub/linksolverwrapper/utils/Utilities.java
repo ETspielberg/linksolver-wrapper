@@ -1,7 +1,7 @@
 package unidue.ub.linksolverwrapper.utils;
 
-import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class Utilities {
@@ -19,13 +19,9 @@ public class Utilities {
             } else
                 stringBuilder.append("&");
             String value = map.get(key);
-            try {
-                stringBuilder.append((key != null ? URLEncoder.encode(key, "UTF-8") : ""));
-                stringBuilder.append("=");
-                stringBuilder.append(value != null ? URLEncoder.encode(value, "UTF-8") : "");
-            } catch (UnsupportedEncodingException e) {
-                throw new RuntimeException("This method requires UTF-8 encoding support", e);
-            }
+            stringBuilder.append((key != null ? URLEncoder.encode(key, StandardCharsets.UTF_8) : ""));
+            stringBuilder.append("=");
+            stringBuilder.append(value != null ? URLEncoder.encode(value, StandardCharsets.UTF_8) : "");
         }
         return stringBuilder.toString();
     }

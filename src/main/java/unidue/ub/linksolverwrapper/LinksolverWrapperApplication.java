@@ -18,7 +18,7 @@ public class LinksolverWrapperApplication extends WebSecurityConfigurerAdapter {
     /**
      *  Security settings. access is allowed from everywhere to the /resolve endpoint
      * @param http HTTP security object from the Spring framework
-     * @throws Exception
+     * @throws Exception General exception
      */
     @Override
     protected void configure(HttpSecurity http) throws Exception {
