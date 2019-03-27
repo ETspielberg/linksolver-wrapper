@@ -46,41 +46,38 @@ public class LinksolverWrapperController {
         String urlString = "";
         RedirectView redirectView = new RedirectView();
 
-        // first, check for DOI
-        if (requestParams.containsKey("id")) {
-            if (requestParams.get("id").startsWith("doi:")) {
-                String doi = requestParams.get("id");
+        // if use the linksolver to determine availablility
+        try {
+            String queryParameters = mapToString(requestParams);
+            Document doc = Jsoup.connect(linksolverUrl + queryParameters).get();
+            for (Element link : doc.select("a")) {
+                String linkType = link.text();
 
-                // get resource link for DOI
-                urlString = DoiConnector.getLink(doi);
-                log.info("retreived link from DOI:");
-            }
-        }
+                // assuming "Link zum Artikel" is always top
+                if ("Link zum Artikel".equals(linkType)) {
+                    urlString = linksolverUrl + link.attr("href");
+                    // check for DOI and retrieve link
+                    if (requestParams.containsKey("id")) {
+                        if (requestParams.get("id").startsWith("doi:")) {
+                            String doi = requestParams.get("id");
 
-        // if no doi is found, use the linksolver
-        else {
-            try {
-                String queryParameters = mapToString(requestParams);
-                Document doc = Jsoup.connect(linksolverUrl + queryParameters).get();
-                for (Element link : doc.select("a")) {
-                    String linkType = link.text();
-
-                    // assuming "Link zum Artikel" is always top
-                    if ("Link zum Artikel".equals(linkType)) {
-                        urlString = linksolverUrl + link.attr("href");
-                        break;
+                            // get resource link for DOI
+                            urlString = DoiConnector.getLink(doi);
+                            log.info("retreived link from DOI:");
+                        }
                     }
-
-                    // if "Link zum Artikel" is not present, redirect to the linksolver
-                    urlString = linksolverUrl + queryParameters;
-                    redirectView.setUrl(linksolverUrl + queryParameters);
+                    break;
                 }
-            } catch (IOException e) {
-                // TODO: handle problems with connection to linksolver
-                e.printStackTrace();
-            }
 
+                // if "Link zum Artikel" is not present, redirect to the linksolver
+                urlString = linksolverUrl + queryParameters;
+                redirectView.setUrl(linksolverUrl + queryParameters);
+            }
+        } catch (IOException e) {
+            // TODO: handle problems with connection to linksolver
+            e.printStackTrace();
         }
+
         log.info("redirecting to url: " + urlString);
 
         // check for shibboleth
