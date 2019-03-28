@@ -86,7 +86,7 @@ public class LinksolverWrapperController {
                         }
                         // redirect to url
                         redirectView.setUrl(url);
-                        break;
+                        return redirectView;
                     }
                     case "Fernleihe Zeitschriften": {
                         if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
@@ -97,9 +97,9 @@ public class LinksolverWrapperController {
                             requestParams.set("genre", "journal");
                             redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
                         }
-                        break;
+                        return redirectView;
                     }
-                    default: {
+                    case "Elektronischer und gedruckter Bestand der UB": {
                         String issn = requestParams.getFirst("issn");
                         if (issn.isEmpty())
                             issn = requestParams.getFirst("eissn");
@@ -114,12 +114,14 @@ public class LinksolverWrapperController {
                             redirectView.setUrl(url);
                         } else
                             redirectView.setUrl(linksolverUrl + queryParameters);
+                        return redirectView;
                     }
                 }
             }
         } catch (IOException e) {
             redirectView.setUrl("/error");
             e.printStackTrace();
+            return redirectView;
         }
         return redirectView;
     }
