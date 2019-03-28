@@ -100,12 +100,14 @@ public class LinksolverWrapperController {
                         break;
                     }
                     default: {
-                        if (requestParams.getFirst("issn") != null) {
+                        String issn = requestParams.getFirst("issn");
+                        if (issn.isEmpty())
+                            issn = requestParams.getFirst("eissn");
+                        if (!issn.isEmpty()) {
                             Map<String, String> iopRequestParams = new HashMap<>();
                             iopRequestParams.put("sid", "bib:ughe");
                             iopRequestParams.put("pid", "bibid%3DUGHE");
                             iopRequestParams.put("genre", "journal");
-
                             iopRequestParams.put("issn", requestParams.getFirst("issn"));
                             // if "Link zum Artikel" is not present, redirect to the linksolver
                             String url = "https://www.uni-due.de/ub/ghbsys/jop" + mapToString(iopRequestParams);
