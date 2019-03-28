@@ -4,16 +4,26 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class DoiConnector {
+public class RedirectLinkRetriever {
 
     /**
      * takes a DOI and tries to get the corresponding resource link by reading the location header from the redirect.
      * @param doi a DOI
      * @return the link to the resource as string
      */
-    public static String getLink(String doi) {
+    public static String getLinkForDoi(String doi) {
+            String url = "https://doi.org/" + doi;
+            return getLinkFromRedirect(url);
+    }
+
+    /**
+     * takes a Link and tries to get the corresponding resource link by reading the location header from the redirect.
+     * @param link a a link to a resolver
+     * @return the link to the resource as string
+     */
+    public static String getLinkFromRedirect(String link) {
         try {
-            URL url = new URL("https://doi.org/" + doi);
+            URL url = new URL(link);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             // do not follow the redirect, just obtain the resource url
             connection.setInstanceFollowRedirects(false);
@@ -26,11 +36,12 @@ public class DoiConnector {
                 return connection.getHeaderField("Location");
             } else {
                 // return the link to doi.org
-                return "https://doi.org/" + doi;
+                return link;
             }
         } catch (IOException ioe) {
             // return the link to doi.org and let them handle problems.
-            return "https://doi.org/" + doi;
+            return link;
         }
     }
+
 }

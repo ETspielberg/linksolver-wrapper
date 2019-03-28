@@ -8,15 +8,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
-import unidue.ub.linksolverwrapper.utils.DoiConnector;
+import unidue.ub.linksolverwrapper.utils.RedirectLinkRetriever;
 import unidue.ub.linksolverwrapper.utils.ShibbolethBuilder;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import static unidue.ub.linksolverwrapper.utils.Utilities.mapListToString;
 import static unidue.ub.linksolverwrapper.utils.Utilities.mapToString;
 
 @Controller
@@ -42,49 +46,79 @@ public class LinksolverWrapperController {
      * @return the redirect to the resource location
      */
     @GetMapping("/resolve")
-    public RedirectView resolve(@RequestParam Map<String, String> requestParams) {
-        String urlString = "";
-        RedirectView redirectView = new RedirectView();
+    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams) {
 
-        // if use the linksolver to determine availablility
+        RedirectView redirectView = new RedirectView();
+        String urlFromDoi = "";
+        String urlFromLinksolver;
+        String doi = "";
+        // first, check for DOI
+        if (requestParams.containsKey("id")) {
+            List<String> ids = requestParams.get("id");
+            for (Object id : ids) {
+                String value = (String) id;
+                if (value.startsWith("doi")) {
+                    doi = value.replace("doi:", "");
+                    urlFromDoi = RedirectLinkRetriever.getLinkForDoi(value);
+                    log.info("retrieved link from DOI: " + urlFromDoi);
+                }
+            }
+        }
+        // retrieve availability information from linksolver
         try {
-            String queryParameters = mapToString(requestParams);
+            String queryParameters = mapListToString(requestParams);
             Document doc = Jsoup.connect(linksolverUrl + queryParameters).get();
             for (Element link : doc.select("a")) {
                 String linkType = link.text();
-
-                // assuming "Link zum Artikel" is always top
-                if ("Link zum Artikel".equals(linkType)) {
-                    urlString = linksolverUrl + link.attr("href");
-                    // check for DOI and retrieve link
-                    if (requestParams.containsKey("id")) {
-                        if (requestParams.get("id").startsWith("doi:")) {
-                            String doi = requestParams.get("id");
-
-                            // get resource link for DOI
-                            urlString = DoiConnector.getLink(doi);
-                            log.info("retreived link from DOI:");
+                switch (linkType) {
+                    case "Link zum Artikel": {
+                        urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
+                        log.info("retrieved link from linksolver: " + urlFromLinksolver);
+                        log.info("full text available. Redirecting to resource.");
+                        // check for shibboleth
+                        String url;
+                        if (!"".equals(urlFromDoi)) {
+                            log.info("trying to construct shibboleth link with doi link.");
+                            url = shibbolethBuilder.constructWayflessUrl(urlFromDoi);
+                        } else {
+                            log.info("trying to construct shibboleth link with  linksolver link.");
+                            url = shibbolethBuilder.constructWayflessUrl(urlFromLinksolver);
                         }
+                        // redirect to url
+                        redirectView.setUrl(url);
+                        break;
                     }
-                    break;
-                }
+                    case "Fernleihe Zeitschriften": {
+                        if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
+                            redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi);
+                        } else {
+                            requestParams.set("sid", "464_465:Zeitschriftenkatalog");
+                            requestParams.set("pid", "<location>464_465<%2Flocation>");
+                            requestParams.set("genre", "journal");
+                            redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
+                        }
+                        break;
+                    }
+                    default: {
+                        if (requestParams.getFirst("issn") != null) {
+                            Map<String, String> iopRequestParams = new HashMap<>();
+                            iopRequestParams.put("sid", "bib:ughe");
+                            iopRequestParams.put("pid", "bibid%3DUGHE");
+                            iopRequestParams.put("genre", "journal");
 
-                // if "Link zum Artikel" is not present, redirect to the linksolver
-                urlString = linksolverUrl + queryParameters;
-                redirectView.setUrl(linksolverUrl + queryParameters);
+                            iopRequestParams.put("issn", requestParams.getFirst("issn"));
+                            // if "Link zum Artikel" is not present, redirect to the linksolver
+                            String url = "https://www.uni-due.de/ub/ghbsys/jop" + mapToString(iopRequestParams);
+                            redirectView.setUrl(url);
+                        } else
+                            redirectView.setUrl(linksolverUrl + queryParameters);
+                    }
+                }
             }
         } catch (IOException e) {
-            // TODO: handle problems with connection to linksolver
+            redirectView.setUrl("/error");
             e.printStackTrace();
         }
-
-        log.info("redirecting to url: " + urlString);
-
-        // check for shibboleth
-        String url = shibbolethBuilder.constructWayflessUrl(urlString);
-
-        // redirect to url
-        redirectView.setUrl(url);
         return redirectView;
     }
 
