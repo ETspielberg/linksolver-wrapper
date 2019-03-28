@@ -108,7 +108,7 @@ public class LinksolverWrapperController {
                             iopRequestParams.put("sid", "bib:ughe");
                             iopRequestParams.put("pid", "bibid%3DUGHE");
                             iopRequestParams.put("genre", "journal");
-                            iopRequestParams.put("issn", requestParams.getFirst("issn"));
+                            iopRequestParams.put("issn", issn);
                             // if "Link zum Artikel" is not present, redirect to the linksolver
                             String url = "https://www.uni-due.de/ub/ghbsys/jop" + mapToString(iopRequestParams);
                             redirectView.setUrl(url);
