@@ -1,3 +1,6 @@
+/*
+ * major help from https://stackoverflow.com/a/41482123/9006787
+ */
 package unidue.ub.linksolverwrapper.controller;
 
 import org.jsoup.Jsoup;
@@ -15,6 +18,7 @@ import org.springframework.web.servlet.view.RedirectView;
 import unidue.ub.linksolverwrapper.utils.RedirectLinkRetriever;
 import unidue.ub.linksolverwrapper.utils.ShibbolethBuilder;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -34,6 +38,9 @@ public class LinksolverWrapperController {
     @Value("${libintel.linksolver.url}")
     private String linksolverUrl;
 
+
+
+
     @Autowired
     public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder) {
         this.shibbolethBuilder = shibbolethBuilder;
@@ -46,8 +53,10 @@ public class LinksolverWrapperController {
      * @return the redirect to the resource location
      */
     @GetMapping("/resolve")
-    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams) {
+    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest request) {
 
+        String remoteAddress = request.getRemoteAddr();
+        log.info("call from " + remoteAddress);
         RedirectView redirectView = new RedirectView();
         String urlFromDoi = "";
         String urlFromLinksolver;
@@ -79,10 +88,10 @@ public class LinksolverWrapperController {
                         String url;
                         if (!"".equals(urlFromDoi)) {
                             log.info("trying to construct shibboleth link with doi link.");
-                            url = shibbolethBuilder.constructWayflessUrl(urlFromDoi);
+                            url = shibbolethBuilder.constructWayflessUrl(urlFromDoi, remoteAddress);
                         } else {
                             log.info("trying to construct shibboleth link with  linksolver link.");
-                            url = shibbolethBuilder.constructWayflessUrl(urlFromLinksolver);
+                            url = shibbolethBuilder.constructWayflessUrl(urlFromLinksolver, remoteAddress);
                         }
                         // redirect to url
                         redirectView.setUrl(url);
@@ -127,9 +136,9 @@ public class LinksolverWrapperController {
     }
 
     @GetMapping("/useShibboleth")
-    public RedirectView useShibboleth(@RequestParam String targetUrl) {
+    public RedirectView useShibboleth(@RequestParam String targetUrl, HttpServletRequest request) {
         RedirectView redirectView = new RedirectView();
-        String url = shibbolethBuilder.constructWayflessUrl(targetUrl);
+        String url = shibbolethBuilder.constructWayflessUrl(targetUrl, request.getRemoteAddr());
         redirectView.setUrl(url);
         return redirectView;
     }
