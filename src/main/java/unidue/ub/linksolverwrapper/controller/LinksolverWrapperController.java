@@ -38,9 +38,6 @@ public class LinksolverWrapperController {
     @Value("${libintel.linksolver.url}")
     private String linksolverUrl;
 
-
-
-
     @Autowired
     public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder) {
         this.shibbolethBuilder = shibbolethBuilder;
@@ -136,9 +133,9 @@ public class LinksolverWrapperController {
     }
 
     @GetMapping("/useShibboleth")
-    public RedirectView useShibboleth(@RequestParam String targetUrl, HttpServletRequest request) {
+    public RedirectView useShibboleth(@RequestParam String target, HttpServletRequest request) {
         RedirectView redirectView = new RedirectView();
-        String url = shibbolethBuilder.constructWayflessUrl(targetUrl, request.getRemoteAddr());
+        String url = shibbolethBuilder.constructWayflessUrl(target, request.getRemoteAddr());
         redirectView.setUrl(url);
         return redirectView;
     }

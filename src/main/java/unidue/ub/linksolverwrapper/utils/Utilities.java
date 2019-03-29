@@ -2,9 +2,6 @@ package unidue.ub.linksolverwrapper.utils;
 
 import org.springframework.util.MultiValueMap;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.Map;
 
 public class Utilities {

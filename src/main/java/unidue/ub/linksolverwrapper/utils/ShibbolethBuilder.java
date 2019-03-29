@@ -12,7 +12,6 @@ import unidue.ub.linksolverwrapper.repository.ShibbolethDataRepository;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -35,7 +34,6 @@ public class ShibbolethBuilder {
     @Value("${libintel.shibboleth.exclusion}")
     private String[] shiboblethFreeSubnet;
 
-
     private Logger log = LoggerFactory.getLogger(ShibbolethBuilder.class);
 
     @Autowired
@@ -44,7 +42,8 @@ public class ShibbolethBuilder {
     }
 
     /**
-     * Takes an URL and checks the database to build the corresponding WAYFless URL
+     * Takes an URL and checks the database to build the corresponding WAYFless URL. If the IP address of the requestor
+     * is within the excluded IP range or no Shibboleth data are found, the original URL is returned.
      * @param urlString The string for the desired resource
      * @return the WAYFless URL to the resource
      */
