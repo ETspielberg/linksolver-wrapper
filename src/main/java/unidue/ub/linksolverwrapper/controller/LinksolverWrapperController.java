@@ -1,5 +1,6 @@
 /*
  * major help from https://stackoverflow.com/a/41482123/9006787
+ * doi regexps from crossref-blog: https://www.crossref.org/blog/dois-and-matching-regular-expressions/
  */
 package unidue.ub.linksolverwrapper.controller;
 
@@ -34,6 +35,10 @@ public class LinksolverWrapperController {
 
     private final static Logger log = LoggerFactory.getLogger(LinksolverWrapperController.class);
 
+    private final String modernDoiRegExp = "^10.\\d{4,9}/[-._;()/:A-Z0-9]+$";
+
+    private final String oldWileyDoiRegExp = "^10.1002/[^\\s]+$";
+
     // the address of the linksolver
     @Value("${libintel.linksolver.url}")
     private String linksolverUrl;
@@ -63,7 +68,7 @@ public class LinksolverWrapperController {
             List<String> ids = requestParams.get("id");
             for (Object id : ids) {
                 String value = (String) id;
-                if (value.startsWith("doi")) {
+                if (isDoi(value)) {
                     doi = value.replace("doi:", "");
                     urlFromDoi = RedirectLinkRetriever.getLinkForDoi(value);
                     log.info("retrieved link from DOI: " + urlFromDoi);
@@ -138,5 +143,9 @@ public class LinksolverWrapperController {
         String url = shibbolethBuilder.constructWayflessUrl(target, request.getRemoteAddr());
         redirectView.setUrl(url);
         return redirectView;
+    }
+
+    private boolean isDoi(String test) {
+    return (test.matches("doi:" + modernDoiRegExp) || test.matches("doi: " + oldWileyDoiRegExp));
     }
 }
