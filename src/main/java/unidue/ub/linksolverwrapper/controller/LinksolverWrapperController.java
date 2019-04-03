@@ -78,7 +78,7 @@ public class LinksolverWrapperController {
         // retrieve availability information from linksolver
         try {
             String queryParameters = mapListToString(requestParams);
-            Document doc = Jsoup.connect(linksolverUrl + queryParameters).get();
+            Document doc = Jsoup.connect(linksolverUrl + queryParameters).timeout(10 * 1000).get();
             for (Element link : doc.select("a")) {
                 String linkType = link.text();
                 switch (linkType) {
