@@ -35,9 +35,9 @@ public class LinksolverWrapperController {
 
     private final static Logger log = LoggerFactory.getLogger(LinksolverWrapperController.class);
 
-    private final String modernDoiRegExp = "^10.\\d{4,9}/[-._;()/:A-Z0-9]+$";
+    private final String modernDoiRegExp = "^doi:10.\\d{4,9}/[-._;()/:A-Za-z0-9]+$";
 
-    private final String oldWileyDoiRegExp = "^10.1002/[^\\s]+$";
+    private final String oldWileyDoiRegExp = "^doi:10.1002/[\\S]+$";
 
     // the address of the linksolver
     @Value("${libintel.linksolver.url}")
@@ -146,6 +146,6 @@ public class LinksolverWrapperController {
     }
 
     private boolean isDoi(String test) {
-    return (test.matches("doi:" + modernDoiRegExp) || test.matches("doi: " + oldWileyDoiRegExp));
+    return (test.matches(modernDoiRegExp) || test.matches(oldWileyDoiRegExp));
     }
 }
