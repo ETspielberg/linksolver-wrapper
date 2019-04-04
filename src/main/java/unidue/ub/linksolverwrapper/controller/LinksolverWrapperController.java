@@ -55,9 +55,11 @@ public class LinksolverWrapperController {
      * @return the redirect to the resource location
      */
     @GetMapping("/resolve")
-    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest request) {
+    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
 
-        String remoteAddress = request.getRemoteAddr();
+        String remoteAddress = "127.0.0.1";
+        if (httpServletRequest.getHeader("remoteAddress") != null)
+            remoteAddress = httpServletRequest.getHeader("remoteAddress");
         log.info("call from " + remoteAddress);
         RedirectView redirectView = new RedirectView();
         String urlFromDoi = "";
@@ -78,7 +80,7 @@ public class LinksolverWrapperController {
         // retrieve availability information from linksolver
         try {
             String queryParameters = mapListToString(requestParams);
-            Document doc = Jsoup.connect(linksolverUrl + queryParameters).timeout(10 * 1000).get();
+            Document doc = Jsoup.connect(linksolverUrl + queryParameters).timeout(60 * 1000).get();
             for (Element link : doc.select("a")) {
                 String linkType = link.text();
                 switch (linkType) {
