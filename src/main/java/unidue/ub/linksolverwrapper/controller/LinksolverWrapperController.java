@@ -63,7 +63,7 @@ public class LinksolverWrapperController {
         log.info("call from " + remoteAddress);
         RedirectView redirectView = new RedirectView();
         String urlFromDoi = "";
-        String urlFromLinksolver;
+        String urlFromLinksolver = "";
         String doi = "";
         // first, check for DOI
         if (requestParams.containsKey("id")) {
@@ -74,6 +74,7 @@ public class LinksolverWrapperController {
                     doi = value.replace("doi:", "");
                     urlFromDoi = RedirectLinkRetriever.getLinkForDoi(value);
                     log.info("retrieved link from DOI: " + urlFromDoi);
+                    redirectView.setUrl(urlFromDoi);
                 }
             }
         }
@@ -83,6 +84,7 @@ public class LinksolverWrapperController {
             Document doc = Jsoup.connect(linksolverUrl + queryParameters).timeout(60 * 1000).get();
             for (Element link : doc.select("a")) {
                 String linkType = link.text();
+                log.info("linksolver returned option " + linkType);
                 switch (linkType) {
                     case "Link zum Artikel": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
@@ -132,6 +134,7 @@ public class LinksolverWrapperController {
                 }
             }
         } catch (IOException e) {
+            log.warn("encountered IO exception");
             redirectView.setUrl("/error");
             e.printStackTrace();
             return redirectView;
