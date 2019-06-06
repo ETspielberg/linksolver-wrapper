@@ -21,6 +21,10 @@ import unidue.ub.linksolverwrapper.utils.ShibbolethBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -56,8 +60,17 @@ public class LinksolverWrapperController {
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
         String referer = "linksolver";
         if (httpServletRequest.getHeader("referer") != null) {
-            if (!httpServletRequest.getHeader("referer").isEmpty())
+            if (!httpServletRequest.getHeader("referer").isEmpty()) {
                 referer = httpServletRequest.getHeader("referer");
+                try {
+                    URI uri = new URI(referer);
+                    referer = URLEncoder.encode(uri.getHost(), StandardCharsets.UTF_8);
+                } catch (URISyntaxException e) {
+                    log.warn("could not decode uri from referrer");
+                }
+
+            }
+
         }
         log.info("referred from " + referer);
         String remoteAddress = "127.0.0.1";
