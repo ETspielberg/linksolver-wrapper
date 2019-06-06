@@ -59,6 +59,7 @@ public class LinksolverWrapperController {
             if (!httpServletRequest.getHeader("referer").isEmpty())
                 referer = httpServletRequest.getHeader("referer");
         }
+        log.info("referred from " + referer);
         String remoteAddress = "127.0.0.1";
         if (httpServletRequest.getHeader("remoteAddress") != null)
             remoteAddress = httpServletRequest.getHeader("remoteAddress");
