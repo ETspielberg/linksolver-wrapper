@@ -54,7 +54,11 @@ public class LinksolverWrapperController {
      */
     @GetMapping("/resolve")
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
-
+        String referer = "linksolver";
+        if (httpServletRequest.getHeader("referer") != null) {
+            if (!httpServletRequest.getHeader("referer").isEmpty())
+                referer = httpServletRequest.getHeader("referer");
+        }
         String remoteAddress = "127.0.0.1";
         if (httpServletRequest.getHeader("remoteAddress") != null)
             remoteAddress = httpServletRequest.getHeader("remoteAddress");
@@ -105,7 +109,7 @@ public class LinksolverWrapperController {
                     case "Fernleihe Zeitschriften": {
                         if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
                             log.debug("no fulltext available and elsevier journal. redirecting to order page.");
-                            redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi);
+                            redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
                         } else {
                             log.debug("no fulltext available. redirecting to interlibrary loan page");
                             requestParams.set("sid", "464_465:Zeitschriftenkatalog");
@@ -115,7 +119,7 @@ public class LinksolverWrapperController {
                         }
                         return redirectView;
                     }
-                    case "Elektronischer und gedruckter Bestand der UB": {
+                    case "Elektronischer und gedruckter Bestand der UB": case "zur Zeitschrift": {
                         log.debug("printed or online access without doi. redirecting to journals online and print page.");
                         String issn = requestParams.getFirst("issn");
                         if (issn != null)
@@ -136,7 +140,7 @@ public class LinksolverWrapperController {
                         }
                         return redirectView;
                     }
-                    case "Volltexte":
+                    case "Volltexte": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
                         log.info("retrieved link from linksolver: " + urlFromLinksolver);
                         log.debug("full text available. Redirecting to resource.");
@@ -146,6 +150,7 @@ public class LinksolverWrapperController {
                         // redirect to url
                         redirectView.setUrl(url);
                         return redirectView;
+                    }
                 }
             }
         } catch (IOException e) {
