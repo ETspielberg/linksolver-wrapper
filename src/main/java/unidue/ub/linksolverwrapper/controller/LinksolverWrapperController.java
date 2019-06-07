@@ -45,6 +45,8 @@ public class LinksolverWrapperController {
     @Value("${libintel.linksolver.url}")
     private String linksolverUrl;
 
+
+    // include the Shibboleth WAYFLless URL Builder
     @Autowired
     public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder) {
         this.shibbolethBuilder = shibbolethBuilder;
@@ -58,10 +60,13 @@ public class LinksolverWrapperController {
      */
     @GetMapping("/resolve")
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
+
+        // read the referrer url from the request and extract the host address. If none is present, set the referer to 'linksolver'
         String referer = "linksolver";
         if (httpServletRequest.getHeader("referer") != null) {
             if (!httpServletRequest.getHeader("referer").isEmpty()) {
                 referer = httpServletRequest.getHeader("referer");
+                log.debug("referer request header: " + referer);
                 try {
                     URI uri = new URI(referer);
                     referer = URLEncoder.encode(uri.getHost(), StandardCharsets.UTF_8);
@@ -70,17 +75,21 @@ public class LinksolverWrapperController {
                 }
 
             }
-
         }
         log.info("referred from " + referer);
+
+        // read the the remoteaddress from  the request. If none is present set it to 127.0.0.1.
         String remoteAddress = "127.0.0.1";
         if (httpServletRequest.getHeader("remoteAddress") != null)
             remoteAddress = httpServletRequest.getHeader("remoteAddress");
         log.info("call from " + remoteAddress);
+
+        // prepare and initalize other variables
         RedirectView redirectView = new RedirectView();
         String urlFromDoi = "";
         String urlFromLinksolver;
         String doi = "";
+
         // first, check for DOI
         if (requestParams.containsKey("id")) {
             log.debug("reading id parameters from request");
@@ -89,8 +98,9 @@ public class LinksolverWrapperController {
             for (Object id : ids) {
                 String value = (String) id;
                 if (isDoi(value)) {
-                    log.debug(value + " idnetified as doi");
+                    log.debug(value + " identified as doi");
                     doi = value.replace("doi:", "");
+                    // ask doi resolver for redirect url
                     urlFromDoi = RedirectLinkRetriever.getLinkForDoi(value);
                     log.info("retrieved link from DOI: " + urlFromDoi);
                     this.isDoiUrl = !urlFromDoi.isEmpty();
@@ -98,6 +108,7 @@ public class LinksolverWrapperController {
                 }
             }
         }
+
         // retrieve availability information from linksolver
         try {
             String queryParameters = mapListToString(requestParams);
@@ -106,10 +117,11 @@ public class LinksolverWrapperController {
             log.debug("found " + doc.select("a").size() + " links in linksolver response");
             for (Element link : doc.select("a")) {
                 String linkType = link.text();
-                log.info("linksolver returned option " + linkType);
+                log.debug("linksolver returned option " + linkType);
                 if (linkType.startsWith("Volltexte "))
                     linkType = linkType.substring(0, 9);
                 switch (linkType) {
+                    // first case: full text is online available, redirect directly to resource, construct WAYFless URL on the fly
                     case "Link zum Artikel": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
                         log.debug("retrieved link from linksolver: " + urlFromLinksolver);
@@ -120,6 +132,9 @@ public class LinksolverWrapperController {
                         redirectView.setUrl(url);
                         return redirectView;
                     }
+                    // second case: only interlibrary loan is available, the check for specific conditions (elsevier).
+                    // If Elsevier is present, redirect to order page and fill doi and source parameters.
+                    // Otherwise redirect to the interlibrary loan page and fill in needed request params for the Fernleihe
                     case "Fernleihe Zeitschriften": {
                         if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
                             log.debug("no fulltext available and elsevier journal. redirecting to order page.");
@@ -133,8 +148,10 @@ public class LinksolverWrapperController {
                         }
                         return redirectView;
                     }
+                    // third case: printed or online media are available but linksolver does not return URL.
+                    // In this case redirect to journal online and print page (JOP-Button)
                     case "Elektronischer und gedruckter Bestand der UB": case "zur Zeitschrift": {
-                        log.debug("printed or online access without doi. redirecting to journals online and print page.");
+                        log.debug("printed or online access without resource url. redirecting to journals online and print page.");
                         String issn = requestParams.getFirst("issn");
                         if (issn != null)
                             if (issn.isEmpty())
@@ -154,6 +171,8 @@ public class LinksolverWrapperController {
                         }
                         return redirectView;
                     }
+                    // fourth case: applicable for ebooks where full-text is available.
+                    // Redirect to resource and construct WAYFless URL if necessary
                     case "Volltexte": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
                         log.info("retrieved link from linksolver: " + urlFromLinksolver);
@@ -167,15 +186,24 @@ public class LinksolverWrapperController {
                     }
                 }
             }
-        } catch (IOException e) {
-            log.warn("encountered IO exception");
+        }
+        // if any errors occur when trying to connect to linkresolver or doi resolver send error.
+        catch (IOException e) {
+            log.warn("encountered IO exception", e);
             redirectView.setUrl("/error");
-            e.printStackTrace();
             return redirectView;
         }
         return redirectView;
     }
 
+    /**
+     * takes the urls from linksolver and doi resolver and constructs a WAYFless URL.
+     * If present, the doi link is preferred.
+     * @param urlFromDoi the url returned from the doi resolver
+     * @param urlFromLinksolver the url returned from the linksolver
+     * @param remoteAddress the remote address from the request
+     * @return the url string to redirect to
+     */
     private String getShibbolethUrl(String urlFromDoi, String urlFromLinksolver, String remoteAddress) {
         String url;
         if (this.isDoiUrl) {
@@ -188,6 +216,13 @@ public class LinksolverWrapperController {
         return url;
     }
 
+    /**
+     * general endpoint to construct WAYFless urls. receiving a target URL a WAYFless URL is constructed if possible
+     * and a redirect is issued.
+     * @param target the original target url
+     * @param request the http request object
+     * @return a redirect to the WAYFless URL for this target
+     */
     @GetMapping("/useShibboleth")
     public RedirectView useShibboleth(@RequestParam String target, HttpServletRequest request) {
         RedirectView redirectView = new RedirectView();
@@ -196,6 +231,11 @@ public class LinksolverWrapperController {
         return redirectView;
     }
 
+    /**
+     * checks whether the test string is a doi starting with: 'doi:'
+     * @param test the string to be tested
+     * @return true, if the string contains a doi
+     */
     private boolean isDoi(String test) {
         String oldWileyDoiRegExp = "^doi:10.1002/[\\S]+$";
         String modernDoiRegExp = "^doi:10.\\d{4,9}/[-._;()/:A-Za-z0-9]+$";
