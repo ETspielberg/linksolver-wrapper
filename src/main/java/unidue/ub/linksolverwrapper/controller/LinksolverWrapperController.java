@@ -61,6 +61,14 @@ public class LinksolverWrapperController {
     @GetMapping("/resolve")
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
 
+        // in case of empty issn and given eissn add eissn value to request parameter map.
+        if (requestParams.get("eissn") != null && !requestParams.get("eissn").isEmpty()) {
+            if (requestParams.get("issn") == null || requestParams.get("issn").isEmpty()) {
+                log.debug("eissn given, but issn is empty. Setting issn to eissn value");
+                requestParams.add("issn", requestParams.get("eissn").get(0));
+            }
+        }
+
         // read the referrer url from the request and extract the host address. If none is present, set the referer to 'linksolver'
         String referer = "linksolver";
         if (httpServletRequest.getHeader("referer") != null) {
@@ -175,8 +183,8 @@ public class LinksolverWrapperController {
                     // Redirect to resource and construct WAYFless URL if necessary
                     case "Volltexte": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
-                        log.info("retrieved link from linksolver: " + urlFromLinksolver);
-                        log.debug("full text available. Redirecting to resource.");
+                        log.debug("retrieved link from linksolver: " + urlFromLinksolver);
+                        log.info("full text available. Redirecting to resource.");
                         // check for shibboleth
                         String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
 
@@ -193,6 +201,7 @@ public class LinksolverWrapperController {
             redirectView.setUrl("/error");
             return redirectView;
         }
+        log.info("redirecting to " + redirectView.getUrl());
         return redirectView;
     }
 

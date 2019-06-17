@@ -48,8 +48,8 @@ public class ShibbolethBuilder {
      * @return the WAYFless URL to the resource
      */
     public String constructWayflessUrl(String urlString, String ipAddress) {
-        log.info("constructing wayfless url");
         if (!matches(ipAddress)) {
+            log.info("constructing wayfless url");
             try {
 
                 // get host for database checking
@@ -92,6 +92,8 @@ public class ShibbolethBuilder {
                 return urlString;
             }
         }
+        else
+            log.info("no shibboleth necessary. ip authentication is used.");
         return urlString;
     }
 
