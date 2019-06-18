@@ -16,6 +16,9 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import unidue.ub.linksolverwrapper.client.UnpaywallClient;
+import unidue.ub.linksolverwrapper.model.Unpaywall;
+import unidue.ub.linksolverwrapper.model.UnpaywallResponse;
 import unidue.ub.linksolverwrapper.utils.RedirectLinkRetriever;
 import unidue.ub.linksolverwrapper.utils.ShibbolethBuilder;
 
@@ -37,6 +40,8 @@ public class LinksolverWrapperController {
 
     private final ShibbolethBuilder shibbolethBuilder;
 
+    private final UnpaywallClient unpaywallClient;
+
     private final static Logger log = LoggerFactory.getLogger(LinksolverWrapperController.class);
 
     private boolean isDoiUrl;
@@ -46,10 +51,16 @@ public class LinksolverWrapperController {
     private String linksolverUrl;
 
 
+    // the email which will be attached to the unpaywall requests
+    @Value("${libintel.unpaywall.email}")
+    private String email;
+
+
     // include the Shibboleth WAYFLless URL Builder
     @Autowired
-    public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder) {
+    public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder, UnpaywallClient unpaywallClient) {
         this.shibbolethBuilder = shibbolethBuilder;
+        this.unpaywallClient = unpaywallClient;
     }
 
     /**
@@ -98,6 +109,8 @@ public class LinksolverWrapperController {
         String urlFromLinksolver;
         String doi = "";
 
+        boolean isOpenAccess = false;
+
         // first, check for DOI
         if (requestParams.containsKey("id")) {
             log.debug("reading id parameters from request");
@@ -112,6 +125,14 @@ public class LinksolverWrapperController {
                     urlFromDoi = RedirectLinkRetriever.getLinkForDoi(value);
                     log.info("retrieved link from DOI: " + urlFromDoi);
                     this.isDoiUrl = !urlFromDoi.isEmpty();
+                    if (this.isDoiUrl) {
+                        log.debug("querying unpaywall for OA status");
+                        String freeUrl = checkUnpaywall(doi);
+                        if (freeUrl != null) {
+                            redirectView.setUrl(freeUrl);
+                            return  redirectView;
+                        }
+                    }
                     redirectView.setUrl(urlFromDoi);
                 }
             }
@@ -135,7 +156,7 @@ public class LinksolverWrapperController {
                         log.debug("retrieved link from linksolver: " + urlFromLinksolver);
                         log.info("full text available. Redirecting to resource.");
                         // check for shibboleth
-                        String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
+                        String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress, isOpenAccess);
                         // redirect to url
                         redirectView.setUrl(url);
                         return redirectView;
@@ -162,7 +183,8 @@ public class LinksolverWrapperController {
                     }
                     // third case: printed or online media are available but linksolver does not return URL.
                     // In this case redirect to journal online and print page (JOP-Button)
-                    case "Elektronischer und gedruckter Bestand der UB": case "zur Zeitschrift": {
+                    case "Elektronischer und gedruckter Bestand der UB":
+                    case "zur Zeitschrift": {
                         log.debug("printed or online access without resource url. redirecting to journals online and print page.");
                         String issn = requestParams.getFirst("issn");
                         if (issn != null)
@@ -190,7 +212,7 @@ public class LinksolverWrapperController {
                         log.debug("retrieved link from linksolver: " + urlFromLinksolver);
                         log.info("full text available. Redirecting to resource.");
                         // check for shibboleth
-                        String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
+                        String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress, isOpenAccess);
 
                         // redirect to url
                         redirectView.setUrl(url);
@@ -212,14 +234,15 @@ public class LinksolverWrapperController {
     /**
      * takes the urls from linksolver and doi resolver and constructs a WAYFless URL.
      * If present, the doi link is preferred.
-     * @param urlFromDoi the url returned from the doi resolver
+     *
+     * @param urlFromDoi        the url returned from the doi resolver
      * @param urlFromLinksolver the url returned from the linksolver
-     * @param remoteAddress the remote address from the request
+     * @param remoteAddress     the remote address from the request
      * @return the url string to redirect to
      */
-    private String getShibbolethUrl(String urlFromDoi, String urlFromLinksolver, String remoteAddress) {
+    private String getShibbolethUrl(String urlFromDoi, String urlFromLinksolver, String remoteAddress, boolean isOpenAccess) {
         String url;
-        if (this.isDoiUrl) {
+        if (this.isDoiUrl && !isOpenAccess) {
             log.debug("trying to construct shibboleth link with doi link.");
             url = shibbolethBuilder.constructWayflessUrl(urlFromDoi, remoteAddress);
         } else {
@@ -232,7 +255,8 @@ public class LinksolverWrapperController {
     /**
      * general endpoint to construct WAYFless urls. receiving a target URL a WAYFless URL is constructed if possible
      * and a redirect is issued.
-     * @param target the original target url
+     *
+     * @param target  the original target url
      * @param request the http request object
      * @return a redirect to the WAYFless URL for this target
      */
@@ -246,6 +270,7 @@ public class LinksolverWrapperController {
 
     /**
      * checks whether the test string is a doi starting with: 'doi:'
+     *
      * @param test the string to be tested
      * @return true, if the string contains a doi
      */
@@ -253,5 +278,25 @@ public class LinksolverWrapperController {
         String oldWileyDoiRegExp = "^doi:10.1002/[\\S]+$";
         String modernDoiRegExp = "^doi:10.\\d{4,9}/[-._;()/:A-Za-z0-9]+$";
         return (test.matches(modernDoiRegExp) || test.matches(oldWileyDoiRegExp));
+    }
+
+
+    private String checkUnpaywall(String doi) {
+        UnpaywallResponse unpaywallResponse = this.unpaywallClient.getUnpaywallData(doi, email);
+        Unpaywall[] unpaywalls = unpaywallResponse.getResults();
+        if (unpaywalls != null && unpaywalls.length > 0) {
+            for (Unpaywall unpaywall : unpaywalls) {
+                log.debug("is free to read: " + unpaywall.isFreeToRead());
+                if (unpaywall.isFreeToRead()) {
+                    log.info("requested resource is listed as open access");
+                    if (unpaywall.getFreeFulltextUrl() != null && !unpaywall.getFreeFulltextUrl().isEmpty()) {
+                        log.debug("redirecting to free fulltext url " + unpaywall.getFreeFulltextUrl());
+                        return(unpaywall.getFreeFulltextUrl());
+                    }
+                }
+            }
+
+        }
+        return null;
     }
 }
