@@ -130,7 +130,7 @@ public class LinksolverWrapperController {
                         String freeUrl = checkUnpaywall(doi);
                         if (freeUrl != null) {
                             redirectView.setUrl(freeUrl);
-                            return  redirectView;
+                            return redirectView;
                         }
                     }
                     redirectView.setUrl(urlFromDoi);
@@ -186,23 +186,25 @@ public class LinksolverWrapperController {
                     case "Elektronischer und gedruckter Bestand der UB":
                     case "zur Zeitschrift": {
                         log.debug("printed or online access without resource url. redirecting to journals online and print page.");
-                        String issn = requestParams.getFirst("issn");
-                        if (issn != null)
-                            if (issn.isEmpty())
-                                issn = requestParams.getFirst("eissn");
-                        if (issn != null) {
-                            if (!issn.isEmpty()) {
-                                Map<String, String> iopRequestParams = new HashMap<>();
-                                iopRequestParams.put("sid", "bib:ughe");
-                                iopRequestParams.put("pid", "bibid%3DUGHE");
-                                iopRequestParams.put("genre", "journal");
-                                iopRequestParams.put("issn", issn);
-                                // if "Link zum Artikel" is not present, redirect to the linksolver
-                                String url = "https://www.uni-due.de/ub/ghbsys/jop" + mapToString(iopRequestParams);
-                                redirectView.setUrl(url);
-                            } else
-                                redirectView.setUrl(linksolverUrl + queryParameters);
-                        }
+                        String issn = requestParams.getFirst("issn").trim();
+                        if (issn != null && issn.isEmpty())
+                            issn = requestParams.getFirst("eissn").trim();
+                        if (issn != null && !issn.isEmpty()) {
+
+                            // the jop api needs the issn with a '-' in the middle. so insert one, if none is present.
+                            if (!issn.contains("-") && issn.length() == 8)
+                                issn = issn.substring(0,4) + "-" + issn.substring(4);
+
+                            Map<String, String> iopRequestParams = new HashMap<>();
+                            iopRequestParams.put("sid", "bib:ughe");
+                            iopRequestParams.put("pid", "bibid%3DUGHE");
+                            iopRequestParams.put("genre", "journal");
+                            iopRequestParams.put("issn", issn);
+                            // if "Link zum Artikel" is not present, redirect to the linksolver
+                            String url = "https://www.uni-due.de/ub/ghbsys/jop" + mapToString(iopRequestParams);
+                            redirectView.setUrl(url);
+                        } else
+                            redirectView.setUrl(linksolverUrl + queryParameters);
                         return redirectView;
                     }
                     // fourth case: applicable for ebooks where full-text is available.
@@ -291,7 +293,7 @@ public class LinksolverWrapperController {
                     log.info("requested resource is listed as open access");
                     if (unpaywall.getFreeFulltextUrl() != null && !unpaywall.getFreeFulltextUrl().isEmpty()) {
                         log.debug("redirecting to free fulltext url " + unpaywall.getFreeFulltextUrl());
-                        return(unpaywall.getFreeFulltextUrl());
+                        return (unpaywall.getFreeFulltextUrl());
                     }
                 }
             }
