@@ -11,7 +11,7 @@ html {
 }
 body {
   margin: 0;
-  background-image: url("/files/custom/background.jpg");
+  background-image: url("../img/wolken.jpg");
   background-size: cover;
   	background-attachment: fixed;
 }
