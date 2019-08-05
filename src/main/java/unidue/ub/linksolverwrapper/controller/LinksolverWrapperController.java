@@ -252,8 +252,8 @@ public class LinksolverWrapperController {
     }
 
     private MultiValueMap<String, String> setIssnIfOnlyEissnIsGiven(MultiValueMap<String, String> requestParams) {
-        if (requestParams.getFirst("eissn") != null && !requestParams.getFirst("eissn").isEmpty()) {
-            if (requestParams.getFirst("issn") == null || requestParams.getFirst("issn").isEmpty()) {
+        if (requestParams.get("eissn") != null && !requestParams.get("eissn").isEmpty()) {
+            if (requestParams.get("issn") == null || requestParams.get("issn").isEmpty()) {
                 log.debug("eissn given, but issn is empty. adding issn with eissn value");
                 requestParams.add("issn", requestParams.get("eissn").get(0));
             }

@@ -25,6 +25,7 @@ public class RedirectLinkRetriever {
         try {
             URL url = new URL(link);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
             // do not follow the redirect, just obtain the resource url
             connection.setInstanceFollowRedirects(false);
             int responseCode = connection.getResponseCode();

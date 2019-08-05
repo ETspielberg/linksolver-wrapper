@@ -1,23 +1,29 @@
 # Linksolver Wrapper
 
-The linksolver-wrapper microservice offers tools to optimize the linksolver behavior and includes a Shibboleth WAYFless-URL generator.
-As a [Spring Boot](https://spring.io/projects/spring-boot) microservice, it can easily be integrated into the [Lib:Intel](https://github.com/ETspielberg/lib-intel) platform.
+The linksolver-wrapper microservice offers tools to extend the linksolver behavior with customized functionalities and includes a Shibboleth WAYFless-URL generator.
+As a [Spring Boot](https://spring.io/projects/spring-boot) microservice, it can easily be integrated into the [Lib:Intel](https://github.com/ETspielberg/lib-intel) platform. 
+Depending on the configuration, it can also be used in a stand-alone situation.
+
+## Open Access preference
+The Linksolver-Wrapper contains a Feign-client to [Unpaywall](https://unpaywall.org/). 
+Using this client, DOI-containing requests are checked for free fulltexts and where available redirects are send to these URLs. 
+At the moment Gold Open Access links are preferred.  
 
 
 ## WAYFless-URL generator
 
-When using shibboleth for authentication, users usually have to navigate through an extended navigational structure to answer the "Where Are You From?" (WAYF) question and to determine the appropriate identity provider.
+When using shibboleth for authentication for subscription journals, users usually have to navigate through an extended navigational structure to answer the "Where Are You From?" (WAYF) question and to determine the appropriate identity provider.
 In order to facilitate the access, the information about the identity provider can be provided in a special url, the so called WAYFless URL (find some useful description and advice [here](https://www.ukfederation.org.uk/library/uploads/Documents/WAYFlessGuidance.pdf)).
 
-The linksolver-wrapper includes a WAYFless-URL generator, which generates both SP-side and IdP-side WAYFless URLs with the help of data from a central Shibboleth data repository.
+The linksolver-wrapper includes a WAYFless-URL generator, which generates both Serviceprovider (SP)-side and Identiy Provider (IdP)-side WAYFless URLs.
+The necessary data for each plattform are stored in a central Shibboleth data repository available through a RESTful repository.
 
 ### Shibboleth data repository
   
 This repository holds platform specific information such as the base host address, the name of the entity-ID parameter and the name of the target-parameter.
 Data are stored in a database ([PostgreSQL](https://www.postgresql.org/) by default) and are delivered through the usual [Spring Data](https://docs.spring.io/spring-data/rest/docs/current/reference/html/) endpoints under "/shibbolethData". 
 
-As these are openly available data, GET access to this endpoints is always allowed, whereas authentication is needed to modify the settings via POST or PUT requests.    
-
+As these are openly available data, GET access to this endpoints is not restricted, whereas authentication is needed to modify the settings via POST or PUT requests.    
 
 ### Linksolver-wrapper
 The Linksolver-Wrapper offers two endpoints: `/resolve` accepts OpenURL parameters and then tries to receive the resource URLs from the OVID linksolver and/or Crossref.
