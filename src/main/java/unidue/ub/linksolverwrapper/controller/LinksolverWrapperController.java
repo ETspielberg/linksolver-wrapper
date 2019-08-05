@@ -147,6 +147,7 @@ public class LinksolverWrapperController {
                         String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
                         // redirect to url
                         redirectView.setUrl(url);
+                        log.info("set redirect " + redirectView.getUrl());
                         return redirectView;
                     }
 
@@ -164,6 +165,7 @@ public class LinksolverWrapperController {
                             requestParams.set("genre", "journal");
                             redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
                         }
+                        log.info("set redirect " + redirectView.getUrl());
                         return redirectView;
                     }
 
@@ -171,6 +173,7 @@ public class LinksolverWrapperController {
                     case "Elsevier Zeitschriften - Link zum Bestellformular": {
                         log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                         redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
+                        break;
                     }
 
                     // printed or online media are available but linksolver does not return URL.

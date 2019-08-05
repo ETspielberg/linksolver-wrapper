@@ -93,7 +93,7 @@ public class ShibbolethBuilder {
             }
         }
         else
-            log.info("no shibboleth necessary. ip authentication is used.");
+            log.info("no shibboleth necessary for IP " + ipAddress + ". ip authentication is used.");
         return urlString;
     }
 
