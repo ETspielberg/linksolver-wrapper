@@ -67,6 +67,8 @@ public class LinksolverWrapperController {
     @GetMapping("/resolve")
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
 
+        this.isDoiUrl = false;
+
         // in case of empty issn and given eissn, add eissn value as issn parameter to request parameter map.
         requestParams = setIssnIfOnlyEissnIsGiven(requestParams);
 
