@@ -4,7 +4,6 @@
  */
 package unidue.ub.linksolverwrapper.controller;
 
-import feign.FeignException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -17,9 +16,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
-import unidue.ub.linksolverwrapper.client.UnpaywallClient;
-import unidue.ub.linksolverwrapper.model.Unpaywall;
-import unidue.ub.linksolverwrapper.model.UnpaywallResponse;
+import unidue.ub.linksolverwrapper.service.UnpaywallService;
 import unidue.ub.linksolverwrapper.utils.RedirectLinkRetriever;
 import unidue.ub.linksolverwrapper.utils.ShibbolethBuilder;
 
@@ -42,8 +39,7 @@ public class LinksolverWrapperController {
     // the ShibbolethBuilder, autowired by the constructor
     private final ShibbolethBuilder shibbolethBuilder;
 
-    // the Unpaywall Feign client, autowired by the constructor
-    private final UnpaywallClient unpaywallClient;
+    private final UnpaywallService unpaywallService;
 
     private final static Logger log = LoggerFactory.getLogger(LinksolverWrapperController.class);
 
@@ -53,15 +49,12 @@ public class LinksolverWrapperController {
     @Value("${libintel.linksolver.url}")
     private String linksolverUrl;
 
-    // the email which will be attached to the unpaywall requests (available at the config server)
-    @Value("${libintel.unpaywall.email}")
-    private String email;
 
     // include the Shibboleth WAYFLless URL Builder and the Unpaywall Feign client
     @Autowired
-    public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder, UnpaywallClient unpaywallClient) {
+    public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder, UnpaywallService unpaywallService) {
         this.shibbolethBuilder = shibbolethBuilder;
-        this.unpaywallClient = unpaywallClient;
+        this.unpaywallService = unpaywallService;
     }
 
     /**
@@ -75,33 +68,13 @@ public class LinksolverWrapperController {
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
 
         // in case of empty issn and given eissn, add eissn value as issn parameter to request parameter map.
-        if (requestParams.get("eissn") != null && !requestParams.get("eissn").isEmpty()) {
-            if (requestParams.get("issn") == null || requestParams.get("issn").isEmpty()) {
-                log.debug("eissn given, but issn is empty. adding issn with eissn value");
-                requestParams.add("issn", requestParams.get("eissn").get(0));
-            }
-        }
+        requestParams = setIssnIfOnlyEissnIsGiven(requestParams);
 
         // read the referrer url from the request and extract the host address. If none is present, set the referer to 'linksolver'
-        String referer = "linksolver";
-        if (httpServletRequest.getHeader("referer") != null && !httpServletRequest.getHeader("referer").isEmpty()) {
-            referer = httpServletRequest.getHeader("referer");
-            log.debug("referer request header: " + referer);
-            try {
-                URI uri = new URI(referer);
-                referer = URLEncoder.encode(uri.getHost(), StandardCharsets.UTF_8);
-            } catch (URISyntaxException e) {
-                log.warn("could not decode uri from referrer", e);
-            }
-
-        }
-        log.info("referred from " + referer);
+        String referer = getReferer(httpServletRequest);
 
         // read the the remoteaddress from  the request. If none is present set it to 127.0.0.1.
-        String remoteAddress = "127.0.0.1";
-        if (httpServletRequest.getHeader("remoteAddress") != null)
-            remoteAddress = httpServletRequest.getHeader("remoteAddress");
-        log.info("call from " + remoteAddress);
+        String remoteAddress = determineRemoteAddress(httpServletRequest);
 
         // prepare and initalize other variables
         RedirectView redirectView = new RedirectView();
@@ -130,7 +103,7 @@ public class LinksolverWrapperController {
 
                     if (this.isDoiUrl) {
                         log.debug("querying unpaywall for OA status");
-                        String freeUrl = checkUnpaywall(doi);
+                        String freeUrl = unpaywallService.checkUnpaywall(doi, urlFromDoi);
 
                         // if a free full text url is returned, redirect directly to the resource.
                         if (freeUrl != null) {
@@ -164,7 +137,9 @@ public class LinksolverWrapperController {
 
                 switch (linkType) {
                     // full text is online available, redirect directly to resource, construct WAYFless URL on the fly
-                    case "Link zum Artikel": {
+                    // applicable also for ebooks where full-text is available.
+                    case "Link zum Artikel":
+                    case "Volltexte": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
                         log.debug("retrieved link from linksolver: " + urlFromLinksolver);
                         log.info("full text available. Redirecting to resource.");
@@ -174,6 +149,7 @@ public class LinksolverWrapperController {
                         redirectView.setUrl(url);
                         return redirectView;
                     }
+
                     // only interlibrary loan is available. check for specific conditions (elsevier).
                     // If elsevier or science direct is present, redirect to order page and fill doi and source parameters.
                     // Otherwise redirect to the interlibrary loan page and fill in needed request params for the Fernleihe.
@@ -190,19 +166,26 @@ public class LinksolverWrapperController {
                         }
                         return redirectView;
                     }
+
                     // if a target specially designed for Elsevier is present, also direct to the order page
                     case "Elsevier Zeitschriften - Link zum Bestellformular": {
                         log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                         redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
                     }
+
                     // printed or online media are available but linksolver does not return URL.
                     // In this case redirect to journal online and print page (JOP-Button)
                     case "Elektronischer und gedruckter Bestand der UB":
                     case "zur Zeitschrift": {
                         log.debug("printed or online access without resource url. redirecting to journals online and print page.");
-                        String issn = requestParams.getFirst("issn").trim();
-                        if (issn != null && issn.isEmpty())
-                            issn = requestParams.getFirst("eissn").trim();
+                        String issn = requestParams.getFirst("issn");
+                        if (issn != null)
+                            if (issn.isEmpty()) {
+                                issn = requestParams.getFirst("eissn");
+                                if (issn != null)
+                                    issn = issn.trim();
+                            } else
+                                issn = issn.trim();
                         if (issn != null && !issn.isEmpty()) {
 
                             // the jop api needs the issn with a '-' in the middle. so insert one, if none is present.
@@ -223,19 +206,7 @@ public class LinksolverWrapperController {
                             redirectView.setUrl(linksolverUrl + queryParameters);
                         return redirectView;
                     }
-                    // applicable for ebooks where full-text is available.
-                    // Redirect to resource and construct WAYFless URL if necessary
-                    case "Volltexte": {
-                        urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
-                        log.debug("retrieved link from linksolver: " + urlFromLinksolver);
-                        log.info("full text available. Redirecting to resource.");
-                        // check for shibboleth
-                        String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
 
-                        // redirect to url
-                        redirectView.setUrl(url);
-                        return redirectView;
-                    }
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
                     }
@@ -245,11 +216,49 @@ public class LinksolverWrapperController {
         // if any errors occur when trying to connect to linkresolver or doi resolver send error.
         catch (IOException e) {
             log.warn("encountered IO exception", e);
-            redirectView.setUrl("/error");
+            String queryParameters = mapListToString(requestParams);
+            if (urlFromDoi == null || urlFromDoi.isEmpty()) {
+                redirectView.setUrl(linksolverUrl + queryParameters);
+            }
             return redirectView;
         }
         log.info("redirecting to " + redirectView.getUrl());
         return redirectView;
+    }
+
+    private String determineRemoteAddress(HttpServletRequest httpServletRequest) {
+        String remoteAddress = "127.0.0.1";
+        if (httpServletRequest.getHeader("remoteAddress") != null)
+            remoteAddress = httpServletRequest.getHeader("remoteAddress");
+        log.info("call from " + remoteAddress);
+        return remoteAddress;
+    }
+
+    private String getReferer(HttpServletRequest httpServletRequest) {
+        String referer = "linksolver";
+        if (httpServletRequest.getHeader("referer") != null && !httpServletRequest.getHeader("referer").isEmpty()) {
+            referer = httpServletRequest.getHeader("referer");
+            log.debug("referer request header: " + referer);
+            try {
+                URI uri = new URI(referer);
+                referer = URLEncoder.encode(uri.getHost(), StandardCharsets.UTF_8);
+            } catch (URISyntaxException e) {
+                log.warn("could not decode uri from referrer", e);
+            }
+
+        }
+        log.info("referred from " + referer);
+        return referer;
+    }
+
+    private MultiValueMap<String, String> setIssnIfOnlyEissnIsGiven(MultiValueMap<String, String> requestParams) {
+        if (requestParams.getFirst("eissn") != null && !requestParams.getFirst("eissn").isEmpty()) {
+            if (requestParams.getFirst("issn") == null || requestParams.getFirst("issn").isEmpty()) {
+                log.debug("eissn given, but issn is empty. adding issn with eissn value");
+                requestParams.add("issn", requestParams.get("eissn").get(0));
+            }
+        }
+        return requestParams;
     }
 
     /**
@@ -301,39 +310,5 @@ public class LinksolverWrapperController {
         return (test.matches(modernDoiRegExp) || test.matches(oldWileyDoiRegExp));
     }
 
-    /**
-     * checks unpaywall for the given doi to check for open access publications
-     *
-     * @param doi the doi of the requested publication
-     * @return the url to the fulltext if present, otherwise null
-     */
-    private String checkUnpaywall(String doi) {
-        try {
-            // execute feign client for unpaywall response. If no data are found, unpaywall returns 404 resulting in
-            // a FeignException.
-            UnpaywallResponse unpaywallResponse = this.unpaywallClient.getUnpaywallData(doi, email);
 
-            // in the results block the indiviudal Feign results are given as list.
-            Unpaywall[] unpaywalls = unpaywallResponse.getResults();
-            if (unpaywalls != null && unpaywalls.length > 0) {
-                // cycle through all results. as soon as a free fulltext url is found, return this value.
-                for (Unpaywall unpaywall : unpaywalls) {
-                    log.debug("is free to read: " + unpaywall.isFreeToRead());
-                    if (unpaywall.isFreeToRead()) {
-                        log.info("requested resource is listed as open access");
-                        if (unpaywall.getFreeFulltextUrl() != null && !unpaywall.getFreeFulltextUrl().isEmpty()) {
-                            log.debug("redirecting to free fulltext url " + unpaywall.getFreeFulltextUrl());
-                            return (unpaywall.getFreeFulltextUrl());
-                        }
-                    }
-                }
-            }
-            // if no free full text url is found return null
-            return null;
-        } catch (FeignException fe) {
-            // if no data are found on Unpaywall, return null as well
-            log.warn("could not retrieve unpaywall data. ", fe);
-            return null;
-        }
-    }
 }
