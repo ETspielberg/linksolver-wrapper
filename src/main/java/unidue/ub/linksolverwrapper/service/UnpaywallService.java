@@ -47,7 +47,8 @@ public class UnpaywallService {
             return url;
         } catch (FeignException fe) {
             // if no data are found on Unpaywall, return null as well
-            log.warn("could not retrieve unpaywall data. ", fe);
+            log.info("no Unpaywalld data available");
+            log.debug("could not retrieve unpaywall data. ", fe);
             return null;
         }
     }

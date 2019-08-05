@@ -142,7 +142,7 @@ public class LinksolverWrapperController {
                     case "Volltexte": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
                         log.debug("retrieved link from linksolver: " + urlFromLinksolver);
-                        log.info("full text available. Redirecting to resource.");
+                        log.info("full text available. Redirecting to resource: " + urlFromLinksolver);
                         // check for shibboleth
                         String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
                         // redirect to url
@@ -252,8 +252,8 @@ public class LinksolverWrapperController {
     }
 
     private MultiValueMap<String, String> setIssnIfOnlyEissnIsGiven(MultiValueMap<String, String> requestParams) {
-        if (requestParams.get("eissn") != null && !requestParams.get("eissn").isEmpty()) {
-            if (requestParams.get("issn") == null || requestParams.get("issn").isEmpty()) {
+        if (requestParams.getFirst("eissn") != null && !requestParams.getFirst("eissn").isEmpty()) {
+            if (requestParams.getFirst("issn") == null || requestParams.getFirst("issn").isEmpty()) {
                 log.debug("eissn given, but issn is empty. adding issn with eissn value");
                 requestParams.add("issn", requestParams.get("eissn").get(0));
             }
@@ -276,7 +276,7 @@ public class LinksolverWrapperController {
             log.debug("trying to construct shibboleth link with doi link.");
             url = shibbolethBuilder.constructWayflessUrl(urlFromDoi, remoteAddress);
         } else {
-            log.debug("trying to construct shibboleth link with  linksolver link.");
+            log.debug("trying to construct shibboleth link with linksolver link.");
             url = shibbolethBuilder.constructWayflessUrl(urlFromLinksolver, remoteAddress);
         }
         return url;
