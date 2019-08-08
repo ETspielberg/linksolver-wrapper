@@ -99,7 +99,7 @@ public class LinksolverWrapperController {
 
                     // ask doi resolver for redirect url
                     urlFromDoi = RedirectLinkRetriever.getLinkForDoi(value);
-                    log.info("retrieved link from DOI: " + urlFromDoi);
+                    log.debug("retrieved link from DOI: " + urlFromDoi);
 
                     this.isDoiUrl = !urlFromDoi.isEmpty();
 
@@ -110,6 +110,7 @@ public class LinksolverWrapperController {
                         // if a free full text url is returned, redirect directly to the resource.
                         if (freeUrl != null) {
                             redirectView.setUrl(freeUrl);
+                            log.info("OA: true, status: Volltext, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
                             return redirectView;
                         }
                     }
@@ -144,12 +145,11 @@ public class LinksolverWrapperController {
                     case "Volltexte": {
                         urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
                         log.debug("retrieved link from linksolver: " + urlFromLinksolver);
-                        log.info("full text available. Redirecting to resource: " + urlFromLinksolver);
                         // check for shibboleth
                         String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
                         // redirect to url
                         redirectView.setUrl(url);
-                        log.info("set redirect " + redirectView.getUrl());
+                        log.info("OA: false, status: Volltext, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
                         return redirectView;
                     }
 
@@ -167,7 +167,7 @@ public class LinksolverWrapperController {
                             requestParams.set("genre", "journal");
                             redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
                         }
-                        log.info("set redirect " + redirectView.getUrl());
+                        log.info("OA: false, status: Fernleihe, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
                         return redirectView;
                     }
 
@@ -175,6 +175,7 @@ public class LinksolverWrapperController {
                     case "Elsevier Zeitschriften - Link zum Bestellformular": {
                         log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                         redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
+                        log.info("OA: false, status: Elsevier-Bestellseite, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
                         break;
                     }
 
@@ -209,11 +210,13 @@ public class LinksolverWrapperController {
                         } else
                             // if no issn is given, redirect to the linksolver
                             redirectView.setUrl(linksolverUrl + queryParameters);
+                        log.info("OA: false, status: JOP-Seite, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
                         return redirectView;
                     }
 
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
+                        log.info("OA: false, status: Link-Name unbekannt, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
                     }
                 }
             }
@@ -225,9 +228,9 @@ public class LinksolverWrapperController {
             if (urlFromDoi == null || urlFromDoi.isEmpty()) {
                 redirectView.setUrl(linksolverUrl + queryParameters);
             }
+            log.info("OA: false, status: IO Exception, redirect: " + redirectView.getUrl() + "', remote: " + remoteAddress + ", referer: " + referer);
             return redirectView;
         }
-        log.info("redirecting to " + redirectView.getUrl());
         return redirectView;
     }
 
@@ -235,7 +238,7 @@ public class LinksolverWrapperController {
         String remoteAddress = "127.0.0.1";
         if (httpServletRequest.getHeader("remoteAddress") != null)
             remoteAddress = httpServletRequest.getHeader("remoteAddress");
-        log.info("call from " + remoteAddress);
+        log.warn("call from " + remoteAddress);
         return remoteAddress;
     }
 
@@ -252,7 +255,6 @@ public class LinksolverWrapperController {
             }
 
         }
-        log.info("referred from " + referer);
         return referer;
     }
 

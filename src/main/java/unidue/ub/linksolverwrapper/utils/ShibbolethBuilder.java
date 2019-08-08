@@ -55,12 +55,12 @@ public class ShibbolethBuilder {
                 // get host for database checking
                 URL url = new URL(urlString);
                 String host = url.getHost();
-                log.info("retrieving data for host \"" + host + "\"");
+                log.debug("retrieving data for host \"" + host + "\"");
                 Optional<ShibbolethData> shibbolethDataMayBe = shibbolethDataRepository.findById(host);
 
                 // if shibboleth data are found in the database, try to build the corresponding wayfless URL
                 if (shibbolethDataMayBe.isPresent()) {
-                    log.info("found shibboleth data");
+                    log.debug("found shibboleth data");
                     ShibbolethData shibbolethData = shibbolethDataMayBe.get();
                     Map<String, String> parameters = new HashMap<>();
 
@@ -68,8 +68,9 @@ public class ShibbolethBuilder {
                     if (shibbolethData.isSpSideWayfless()) {
                         parameters.put(shibbolethData.getEntityIdString(), entityId);
                         parameters.put(shibbolethData.getTargetString(), urlString);
-                        log.info("generated SP-side WAYFLESS-URL");
-                        log.info(shibbolethData.getServiceproviderSibbolethUrl() + mapToString(parameters));
+                        log.debug("generated SP-side WAYFLESS-URL");
+                        log.debug(shibbolethData.getServiceproviderSibbolethUrl() + mapToString(parameters));
+                        log.info("In IP-Range: false, Shibboleth-Daten: true, type: SP-side");
                         return shibbolethData.getServiceproviderSibbolethUrl() + mapToString(parameters);
                     }
                     // building the URL for IP-side WAYFless
@@ -77,23 +78,25 @@ public class ShibbolethBuilder {
                         parameters.put("target", urlString);
                         parameters.put("shire", shibbolethData.getShire());
                         parameters.put("providerId", shibbolethData.getProviderId());
-                        log.info("generated IP-side WAYFLESS-URL");
-                        log.info(idpUrl + mapToString(parameters));
+                        log.debug("generated IP-side WAYFLESS-URL");
+                        log.debug(idpUrl + mapToString(parameters));
+                        log.info("In IP-Range: false, Shibboleth-Daten: true, type: IP-side");
                         return idpUrl + mapToString(parameters);
                     }
 
                 } else {
-                    log.info("no shibboleth data found. returning original URL");
+                    log.info("In IP-Range: false, Shibboleth-Daten: false, type: none");
                     return urlString;
                 }
             } catch (MalformedURLException mue) {
-                log.info("given url is malformed, returning original URL");
-                log.info(urlString);
+                log.info("In IP-Range: false, Shibboleth-Daten: false, type: error");
+                log.debug("given url is malformed, returning original URL");
+                log.debug(urlString);
                 return urlString;
             }
         }
         else
-            log.info("no shibboleth necessary for IP " + ipAddress + ". ip authentication is used.");
+            log.info("In IP-Range: true, Shibboleth-Daten: none, type: none");
         return urlString;
     }
 
