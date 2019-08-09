@@ -110,7 +110,7 @@ public class LinksolverWrapperController {
                         // if a free full text url is returned, redirect directly to the resource.
                         if (freeUrl != null) {
                             redirectView.setUrl(freeUrl);
-                            log.info("OA: true, status: Volltext, remote: " + remoteAddress + ", referer: " + referer);
+                            log.info("OA: true, status: 'Volltext', remote: " + remoteAddress + ", referer: " + referer);
                             return redirectView;
                         }
                     }
@@ -149,7 +149,7 @@ public class LinksolverWrapperController {
                         String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
                         // redirect to url
                         redirectView.setUrl(url);
-                        log.info("OA: false, status: Volltext, remote: " + remoteAddress + ", referer: " + referer);
+                        log.info("OA: false, status: 'Volltext', remote: " + remoteAddress + ", referer: " + referer);
                         return redirectView;
                     }
 
@@ -160,15 +160,15 @@ public class LinksolverWrapperController {
                         if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
                             log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                             redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
-                            log.info("OA: false, status: Elsevier-Bestellseite, remote: " + remoteAddress + ", referer: " + referer);
+                            log.info("OA: false, status: 'Elsevier-Bestellseite', remote: " + remoteAddress + ", referer: " + referer);
                         } else {
                             log.debug("no fulltext available. redirecting to interlibrary loan page");
                             requestParams.set("sid", "464_465:Zeitschriftenkatalog");
                             requestParams.set("pid", "<location>464_465<%2Flocation>");
                             requestParams.set("genre", "journal");
                             redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
+                            log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
                         }
-                        log.info("OA: false, status: Fernleihe, remote: " + remoteAddress + ", referer: " + referer);
                         return redirectView;
                     }
 
@@ -176,7 +176,7 @@ public class LinksolverWrapperController {
                     case "Elsevier Zeitschriften - Link zum Bestellformular": {
                         log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                         redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
-                        log.info("OA: false, status: Elsevier-Bestellseite, remote: " + remoteAddress + ", referer: " + referer);
+                        log.info("OA: false, status: 'Elsevier-Bestellseite', remote: " + remoteAddress + ", referer: " + referer);
                         break;
                     }
 
@@ -208,16 +208,17 @@ public class LinksolverWrapperController {
 
                             String url = "https://www.uni-due.de/ub/ghbsys/jop" + mapToString(iopRequestParams);
                             redirectView.setUrl(url);
-                        } else
+                            log.info("OA: false, status: 'JOP-Seite', remote: " + remoteAddress + ", referer: " + referer);
+                        } else {
                             // if no issn is given, redirect to the linksolver
                             redirectView.setUrl(linksolverUrl + queryParameters);
-                        log.info("OA: false, status: JOP-Seite, remote: " + remoteAddress + ", referer: " + referer);
+                            log.info("OA: false, status: 'Linksolver (no ISSN)', remote: " + remoteAddress + ", referer: " + referer);
+                        }
                         return redirectView;
                     }
-
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
-                        log.info("OA: false, status: Link-Name unbekannt, remote: " + remoteAddress + ", referer: " + referer);
+                        log.info("OA: false, status: 'Link-Name unbekannt', remote: " + remoteAddress + ", referer: " + referer);
                     }
                 }
             }
@@ -230,7 +231,7 @@ public class LinksolverWrapperController {
                 redirectView.setUrl(linksolverUrl + queryParameters);
             }
             log.debug("redirect to " + redirectView.getUrl());
-            log.info("OA: false, status: IO Exception, remote: " + remoteAddress + ", referer: " + referer);
+            log.info("OA: false, status: 'IO Exception', remote: " + remoteAddress + ", referer: " + referer);
             return redirectView;
         }
         return redirectView;
