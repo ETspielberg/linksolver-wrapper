@@ -49,7 +49,7 @@ public class ShibbolethBuilder {
      */
     public String constructWayflessUrl(String urlString, String ipAddress) {
         if (!matches(ipAddress)) {
-            log.info("constructing wayfless url");
+            log.debug("constructing wayfless url");
             try {
 
                 // get host for database checking

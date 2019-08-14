@@ -153,24 +153,6 @@ public class LinksolverWrapperController {
                         return redirectView;
                     }
 
-                    // only interlibrary loan is available. check for specific conditions (elsevier).
-                    // If elsevier or science direct is present, redirect to order page and fill doi and source parameters.
-                    // Otherwise redirect to the interlibrary loan page and fill in needed request params for the Fernleihe.
-                    case "Fernleihe Zeitschriften": {
-                        if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
-                            log.debug("no fulltext available and elsevier journal. redirecting to order page.");
-                            redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
-                            log.info("OA: false, status: 'Elsevier-Bestellseite', remote: " + remoteAddress + ", referer: " + referer);
-                        } else {
-                            log.debug("no fulltext available. redirecting to interlibrary loan page");
-                            requestParams.set("sid", "464_465:Zeitschriftenkatalog");
-                            requestParams.set("pid", "<location>464_465<%2Flocation>");
-                            requestParams.set("genre", "journal");
-                            redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
-                            log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
-                        }
-                        return redirectView;
-                    }
 
                     // if a target specially designed for Elsevier is present, also direct to the order page
                     case "Elsevier Zeitschriften - Link zum Bestellformular": {
@@ -213,6 +195,25 @@ public class LinksolverWrapperController {
                             // if no issn is given, redirect to the linksolver
                             redirectView.setUrl(linksolverUrl + queryParameters);
                             log.info("OA: false, status: 'Linksolver (no ISSN)', remote: " + remoteAddress + ", referer: " + referer);
+                        }
+                        return redirectView;
+                    }
+
+                    // only interlibrary loan is available. check for specific conditions (elsevier).
+                    // If elsevier or science direct is present, redirect to order page and fill doi and source parameters.
+                    // Otherwise redirect to the interlibrary loan page and fill in needed request params for the Fernleihe.
+                    case "Fernleihe Zeitschriften": {
+                        if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
+                            log.debug("no fulltext available and elsevier journal. redirecting to order page.");
+                            redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
+                            log.info("OA: false, status: 'Elsevier-Bestellseite', remote: " + remoteAddress + ", referer: " + referer);
+                        } else {
+                            log.debug("no fulltext available. redirecting to interlibrary loan page");
+                            requestParams.set("sid", "464_465:Zeitschriftenkatalog");
+                            requestParams.set("pid", "<location>464_465<%2Flocation>");
+                            requestParams.set("genre", "journal");
+                            redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
+                            log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
                         }
                         return redirectView;
                     }
