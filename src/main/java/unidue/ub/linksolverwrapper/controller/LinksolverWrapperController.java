@@ -225,7 +225,7 @@ public class LinksolverWrapperController {
             }
         }
         // if any errors occur when trying to connect to linkresolver or doi resolver send error.
-        catch (IOException e) {
+        catch (Exception e) {
             log.warn("encountered IO exception", e);
             String queryParameters = mapListToString(requestParams);
             if (urlFromDoi == null || urlFromDoi.isEmpty()) {
