@@ -26,6 +26,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,6 +69,9 @@ public class LinksolverWrapperController {
     public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
 
         this.isDoiUrl = false;
+
+
+        requestParams = cleanUpRequestPrams(requestParams);
 
         // in case of empty issn and given eissn, add eissn value as issn parameter to request parameter map.
         requestParams = setIssnIfOnlyEissnIsGiven(requestParams);
@@ -202,6 +206,7 @@ public class LinksolverWrapperController {
                     // only interlibrary loan is available. check for specific conditions (elsevier).
                     // If elsevier or science direct is present, redirect to order page and fill doi and source parameters.
                     // Otherwise redirect to the interlibrary loan page and fill in needed request params for the Fernleihe.
+                    case "Fernleihe":
                     case "Fernleihe Zeitschriften": {
                         if (urlFromDoi.contains("sciencedirect") || urlFromDoi.contains("elsevier")) {
                             log.debug("no fulltext available and elsevier journal. redirecting to order page.");
@@ -213,13 +218,14 @@ public class LinksolverWrapperController {
                             requestParams.set("pid", "<location>464_465<%2Flocation>");
                             requestParams.set("genre", "journal");
                             redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
+                            log.debug("redirect url: " + redirectView.getUrl());
                             log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
                         }
                         return redirectView;
                     }
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
-                        log.info("OA: false, status: 'Link-Name unbekannt', remote: " + remoteAddress + ", referer: " + referer);
+                        // log.info("OA: false, status: 'Link-Name unbekannt', remote: " + remoteAddress + ", referer: " + referer);
                     }
                 }
             }
@@ -236,6 +242,19 @@ public class LinksolverWrapperController {
             return redirectView;
         }
         return redirectView;
+    }
+
+    private MultiValueMap<String, String> cleanUpRequestPrams(MultiValueMap<String, String> requestParams) {
+        requestParams.keySet().forEach(
+                key -> {
+                    List<String> values = requestParams.get(key);
+                    List<String> newValues = new ArrayList<>();
+                    for (String value: values)
+                        newValues.add(cleanUpString(value));
+                    requestParams.replace(key, newValues);
+                }
+        );
+        return requestParams;
     }
 
     private String determineRemoteAddress(HttpServletRequest httpServletRequest) {
@@ -321,5 +340,20 @@ public class LinksolverWrapperController {
         return (test.matches(modernDoiRegExp) || test.matches(oldWileyDoiRegExp));
     }
 
+    private String cleanUpString(String queryString) {
+        if (queryString != null) {
+            if (queryString.contains("{"))
+                queryString = queryString.replace("{", "");
+            if (queryString.contains("%0A"))
+                queryString = queryString.replace("%0A", "+");
+            if (queryString.contains("%0D"))
+                queryString = queryString.replace("%0D", "+");
+            if (queryString.contains("\n"))
+                queryString = queryString.replace("\n", "+");
+            if (queryString.contains("\r"))
+                queryString = queryString.replace("\r", "+");
+        }
+        return queryString;
+    }
 
 }
