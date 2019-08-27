@@ -24,6 +24,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -157,7 +158,6 @@ public class LinksolverWrapperController {
                         return redirectView;
                     }
 
-
                     // if a target specially designed for Elsevier is present, also direct to the order page
                     case "Elsevier Zeitschriften - Link zum Bestellformular": {
                         log.debug("no fulltext available and elsevier journal. redirecting to order page.");
@@ -200,7 +200,7 @@ public class LinksolverWrapperController {
                             redirectView.setUrl(linksolverUrl + queryParameters);
                             log.info("OA: false, status: 'Linksolver (no ISSN)', remote: " + remoteAddress + ", referer: " + referer);
                         }
-                        return redirectView;
+                        break;
                     }
 
                     // only interlibrary loan is available. check for specific conditions (elsevier).
@@ -221,7 +221,6 @@ public class LinksolverWrapperController {
                             log.debug("redirect url: " + redirectView.getUrl());
                             log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
                         }
-                        return redirectView;
                     }
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
