@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: linksolver-wrapper
+  cloud:
+    config:
+      uri: http://localhost:11811
+      name: shibboleth, settings-datasource, linksolver
+      username: ${libintel.config.username:dalek}
+      password: ${libintel.config.password:3l1m1nat3}
+      label: ${libintel.profile:dev}
+

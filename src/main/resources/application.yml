@@ -1,0 +1,9 @@
+server:
+  port: ${server_port:11921}
+
+spring:
+  security:
+    user:
+      name: ${libintel.system.username:thedoctor}
+      password: ${libintel.system.password:Tard15}
+      roles: SYSTEM
