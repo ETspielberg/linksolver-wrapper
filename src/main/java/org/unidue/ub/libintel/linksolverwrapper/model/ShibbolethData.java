@@ -32,6 +32,11 @@ public class ShibbolethData {
     @Column(name="provider_id")
     private String providerId;
 
+    @Column(name="additional_url_parameters")
+    private String additionalUrlParameters;
+
+
+
     public String getHost() {
         return host;
     }
@@ -86,5 +91,13 @@ public class ShibbolethData {
 
     public void setProviderId(String providerId) {
         this.providerId = providerId;
+    }
+
+    public String getAdditionalUrlParameters() {
+        return additionalUrlParameters;
+    }
+
+    public void setAdditionalUrlParameters(String additionalUrlParameters) {
+        this.additionalUrlParameters = additionalUrlParameters;
     }
 }

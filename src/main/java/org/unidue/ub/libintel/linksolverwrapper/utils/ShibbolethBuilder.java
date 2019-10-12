@@ -61,7 +61,7 @@ public class ShibbolethBuilder {
                     log.debug("found shibboleth data");
                     ShibbolethData shibbolethData = shibbolethDataMayBe.get();
                     Map<String, String> parameters = new HashMap<>();
-
+                    String shibboleth_url = "";
                     // building the URL for SP-side WAYFless
                     if (shibbolethData.isSpSideWayfless()) {
                         parameters.put(shibbolethData.getEntityIdString(), entityId);
@@ -69,7 +69,9 @@ public class ShibbolethBuilder {
                         log.debug("generated SP-side WAYFLESS-URL");
                         log.debug(shibbolethData.getServiceproviderSibbolethUrl() + Utilities.mapToString(parameters));
                         log.info("In IP-Range: false, Shibboleth-Daten: true, type: SP-side");
-                        return shibbolethData.getServiceproviderSibbolethUrl() + Utilities.mapToString(parameters);
+                        shibboleth_url = shibbolethData.getServiceproviderSibbolethUrl() + Utilities.mapToString(parameters);
+
+
                     }
                     // building the URL for IP-side WAYFless
                     else {
@@ -79,8 +81,13 @@ public class ShibbolethBuilder {
                         log.debug("generated IP-side WAYFLESS-URL");
                         log.debug(idpUrl + Utilities.mapToString(parameters));
                         log.info("In IP-Range: false, Shibboleth-Daten: true, type: IP-side");
-                        return idpUrl + Utilities.mapToString(parameters);
+                        shibboleth_url = idpUrl + Utilities.mapToString(parameters);
+
                     }
+                    if (shibbolethData.getAdditionalUrlParameters() != null) {
+                        shibboleth_url += shibbolethData.getAdditionalUrlParameters();
+                    }
+                    return shibboleth_url;
 
                 } else {
                     log.info("In IP-Range: false, Shibboleth-Daten: false, type: none");
