@@ -219,6 +219,7 @@ public class LinksolverWrapperController {
                             log.debug("redirect url: " + redirectView.getUrl());
                             log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
                         }
+                        break;
                     }
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
