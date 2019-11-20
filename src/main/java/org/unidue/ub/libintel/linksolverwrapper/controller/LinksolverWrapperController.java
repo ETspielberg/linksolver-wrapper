@@ -161,7 +161,7 @@ public class LinksolverWrapperController {
                         log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                         redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
                         log.info("OA: false, status: 'Elsevier-Bestellseite', remote: " + remoteAddress + ", referer: " + referer);
-                        break;
+                        return redirectView;
                     }
 
                     // printed or online media are available but linksolver does not return URL.
@@ -198,7 +198,7 @@ public class LinksolverWrapperController {
                             redirectView.setUrl(linksolverUrl + queryParameters);
                             log.info("OA: false, status: 'Linksolver (no ISSN)', remote: " + remoteAddress + ", referer: " + referer);
                         }
-                        break;
+                        return redirectView;
                     }
 
                     // only interlibrary loan is available. check for specific conditions (elsevier).
@@ -210,6 +210,7 @@ public class LinksolverWrapperController {
                             log.debug("no fulltext available and elsevier journal. redirecting to order page.");
                             redirectView.setUrl("https://www.uni-due.de/ub/elsevierersatz.php?doi=" + doi + "&source=" + referer);
                             log.info("OA: false, status: 'Elsevier-Bestellseite', remote: " + remoteAddress + ", referer: " + referer);
+                            return redirectView;
                         } else {
                             log.debug("no fulltext available. redirecting to interlibrary loan page");
                             requestParams.set("sid", "464_465:Zeitschriftenkatalog");
@@ -218,8 +219,8 @@ public class LinksolverWrapperController {
                             redirectView.setUrl("https://www.digibib.net/openurl" + mapListToString(requestParams));
                             log.debug("redirect url: " + redirectView.getUrl());
                             log.info("OA: false, status: 'Fernleihe', remote: " + remoteAddress + ", referer: " + referer);
+                            return redirectView;
                         }
-                        break;
                     }
                     default: {
                         redirectView.setUrl(linksolverUrl + queryParameters);
