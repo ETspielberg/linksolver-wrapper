@@ -4,7 +4,7 @@ spring:
   cloud:
     config:
       uri: http://localhost:11811
-      name: shibboleth, settings-datasource, linksolver
+      name: shibboleth, settings-datasource, linksolver, primo
       username: ${libintel.config.username:dalek}
       password: ${libintel.config.password:3l1m1nat3}
       label: ${libintel.profile:dev}
