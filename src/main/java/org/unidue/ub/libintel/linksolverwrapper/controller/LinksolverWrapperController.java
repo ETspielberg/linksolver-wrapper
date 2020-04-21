@@ -131,11 +131,16 @@ public class LinksolverWrapperController {
         // then, check for isbn
         if (requestParams.containsKey("isbn") || requestParams.containsKey("eisbn")) {
             log.debug("reading isbn parameters from request");
-            List<String> isbns = requestParams.get("isbn");
-            isbns.addAll(requestParams.get("eisbn"));
+            List<String> isbns = new ArrayList<>();
+            if (requestParams.get("isbn") != null && !requestParams.get("isbn").isEmpty())
+                isbns.addAll(requestParams.get("isbn"));
+            if (requestParams.get("eisbn") != null && !requestParams.get("eisbn").isEmpty())
+                isbns.addAll(requestParams.get("eisbn"));
+
             log.debug("found " + isbns.size() + " isbn parameters");
-            for (Object isbn : isbns) {
-                String value = (String) isbn;
+            if (isbns.size() > 0) {
+                for (Object isbn : isbns) {
+                    String value = (String) isbn;
                     // ask doi resolver for redirect url
                     String urlFromPrimo = primoFullTextUrlService.getPrimoResponse(value);
                     log.debug("retrieved link from DOI: " + urlFromPrimo);
@@ -146,6 +151,7 @@ public class LinksolverWrapperController {
                     }
                 }
             }
+        }
 
 
         // retrieve availability information from linksolver
