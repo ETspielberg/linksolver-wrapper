@@ -4,6 +4,7 @@
  */
 package org.unidue.ub.libintel.linksolverwrapper.controller;
 
+import org.jsoup.HttpStatusException;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -128,6 +129,7 @@ public class LinksolverWrapperController {
             }
         }
 
+        /*
         // then, check for isbn
         if (requestParams.containsKey("isbn") || requestParams.containsKey("eisbn")) {
             log.debug("reading isbn parameters from request");
@@ -152,6 +154,7 @@ public class LinksolverWrapperController {
                 }
             }
         }
+        */
 
 
         // retrieve availability information from linksolver
@@ -264,10 +267,18 @@ public class LinksolverWrapperController {
             }
         }
         // if any errors occur when trying to connect to linkresolver or doi resolver send error.
+        catch (HttpStatusException hse) {
+            log.warn("encountered http status exception", hse);
+            String queryParameters = mapListToString(requestParams);
+                redirectView.setUrl(linksolverUrl + queryParameters);
+            log.debug("redirect to " + redirectView.getUrl());
+            log.info("OA: false, status: 'Http Status Exception', remote: " + remoteAddress + ", referer: " + referer);
+            return redirectView;
+        }
         catch (Exception e) {
             log.warn("encountered IO exception", e);
             String queryParameters = mapListToString(requestParams);
-            if (urlFromDoi == null || urlFromDoi.isEmpty() || !urlFromDoi.contains("link.springer.com")) {
+            if (urlFromDoi == null || urlFromDoi.isEmpty()) {
                 redirectView.setUrl(linksolverUrl + queryParameters);
             }
             log.debug("redirect to " + redirectView.getUrl());
