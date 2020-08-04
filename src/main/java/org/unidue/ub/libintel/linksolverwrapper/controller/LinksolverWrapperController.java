@@ -146,8 +146,12 @@ public class LinksolverWrapperController {
                     // applicable also for ebooks where full-text is available.
                     case "Link zum Artikel":
                     case "Volltexte": {
-                        urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
-                        log.debug("retrieved link from linksolver: " + urlFromLinksolver);
+                        if (!(urlFromDoi.contains("link.springer.com"))) {
+                            urlFromLinksolver = RedirectLinkRetriever.getLinkFromRedirect(linksolverUrl + link.attr("href"));
+                            log.debug("retrieved link from linksolver: " + urlFromLinksolver);
+                        } else {
+                            urlFromLinksolver = "";
+                        }
                         // check for shibboleth
                         String url = getShibbolethUrl(urlFromDoi, urlFromLinksolver, remoteAddress);
                         // redirect to url
@@ -233,7 +237,7 @@ public class LinksolverWrapperController {
         catch (Exception e) {
             log.warn("encountered IO exception", e);
             String queryParameters = mapListToString(requestParams);
-            if (urlFromDoi == null || urlFromDoi.isEmpty()) {
+            if (urlFromDoi == null || urlFromDoi.isEmpty() || !urlFromDoi.contains("link.springer.com")) {
                 redirectView.setUrl(linksolverUrl + queryParameters);
             }
             log.debug("redirect to " + redirectView.getUrl());
