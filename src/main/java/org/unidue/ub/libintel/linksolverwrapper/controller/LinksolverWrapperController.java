@@ -16,6 +16,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.view.RedirectView;
+import org.unidue.ub.libintel.linksolverwrapper.service.PrimoFullTextUrlService;
 import org.unidue.ub.libintel.linksolverwrapper.service.UnpaywallService;
 import org.unidue.ub.libintel.linksolverwrapper.utils.RedirectLinkRetriever;
 import org.unidue.ub.libintel.linksolverwrapper.utils.ShibbolethBuilder;
@@ -41,6 +42,8 @@ public class LinksolverWrapperController {
 
     private final UnpaywallService unpaywallService;
 
+    private final PrimoFullTextUrlService primoFullTextUrlService;
+
     private final static Logger log = LoggerFactory.getLogger(LinksolverWrapperController.class);
 
     private boolean isDoiUrl;
@@ -52,9 +55,10 @@ public class LinksolverWrapperController {
 
     // include the Shibboleth WAYFLless URL Builder and the Unpaywall Feign client
     @Autowired
-    public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder, UnpaywallService unpaywallService) {
+    public LinksolverWrapperController(ShibbolethBuilder shibbolethBuilder, UnpaywallService unpaywallService, PrimoFullTextUrlService primoFullTextUrlService) {
         this.shibbolethBuilder = shibbolethBuilder;
         this.unpaywallService = unpaywallService;
+        this.primoFullTextUrlService = primoFullTextUrlService;
     }
 
     /**
@@ -123,6 +127,32 @@ public class LinksolverWrapperController {
                 }
             }
         }
+
+        // then, check for isbn
+        if (requestParams.containsKey("isbn") || requestParams.containsKey("eisbn")) {
+            log.debug("reading isbn parameters from request");
+            List<String> isbns = new ArrayList<>();
+            if (requestParams.get("isbn") != null && !requestParams.get("isbn").isEmpty())
+                isbns.addAll(requestParams.get("isbn"));
+            if (requestParams.get("eisbn") != null && !requestParams.get("eisbn").isEmpty())
+                isbns.addAll(requestParams.get("eisbn"));
+
+            log.debug("found " + isbns.size() + " isbn parameters");
+            if (isbns.size() > 0) {
+                for (Object isbn : isbns) {
+                    String value = (String) isbn;
+                    // ask doi resolver for redirect url
+                    String urlFromPrimo = primoFullTextUrlService.getPrimoResponse(value);
+                    log.debug("retrieved link from DOI: " + urlFromPrimo);
+                    if (urlFromPrimo != null) {
+                        String url = getShibbolethUrl(urlFromDoi, urlFromPrimo, remoteAddress);
+                        redirectView.setUrl(url);
+                        return redirectView;
+                    }
+                }
+            }
+        }
+
 
         // retrieve availability information from linksolver
         try {
