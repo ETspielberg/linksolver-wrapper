@@ -270,6 +270,9 @@ public class LinksolverWrapperController {
         catch (HttpStatusException hse) {
             log.warn("encountered http status exception", hse);
             String queryParameters = mapListToString(requestParams);
+            if (urlFromDoi != null && urlFromDoi.contains("link.springer.com"))
+                redirectView.setUrl(urlFromDoi);
+            else
                 redirectView.setUrl(linksolverUrl + queryParameters);
             log.debug("redirect to " + redirectView.getUrl());
             log.info("OA: false, status: 'Http Status Exception', remote: " + remoteAddress + ", referer: " + referer);
