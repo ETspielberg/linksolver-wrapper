@@ -270,7 +270,7 @@ public class LinksolverWrapperController {
         catch (HttpStatusException hse) {
             log.warn("encountered http status exception", hse);
             String queryParameters = mapListToString(requestParams);
-            if (urlFromDoi != null && urlFromDoi.contains("link.springer.com"))
+            if (urlFromDoi.contains("link.springer.com/book") || urlFromDoi.contains("link.springer.com/chapter"))
                 redirectView.setUrl(urlFromDoi);
             else
                 redirectView.setUrl(linksolverUrl + queryParameters);
