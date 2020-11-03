@@ -2,6 +2,9 @@ package org.unidue.ub.libintel.linksolverwrapper.utils;
 
 import org.springframework.util.MultiValueMap;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class Utilities {
@@ -11,7 +14,7 @@ public class Utilities {
      * @param map a map of parameters
      * @return a string with parameters including the initial '?'
      */
-    public static String mapListToString(MultiValueMap<String, String> map) {
+    public static String mapListToString(MultiValueMap<String, String> map) throws UnsupportedEncodingException {
         StringBuilder stringBuilder = new StringBuilder();
         // go through all paramter lists
         for (String key : map.keySet()) {
@@ -23,7 +26,7 @@ public class Utilities {
                 } else
                     stringBuilder.append("&");
                 // append the key-value-pair
-                stringBuilder.append(key).append("=").append(value);
+                stringBuilder.append(URLEncoder.encode(key, StandardCharsets.UTF_8.toString())).append("=").append(URLEncoder.encode(value, StandardCharsets.UTF_8.toString()));
             }
         }
         return stringBuilder.toString();

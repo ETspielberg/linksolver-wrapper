@@ -23,6 +23,7 @@ import org.unidue.ub.libintel.linksolverwrapper.utils.RedirectLinkRetriever;
 import org.unidue.ub.libintel.linksolverwrapper.utils.ShibbolethBuilder;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLEncoder;
@@ -70,7 +71,7 @@ public class LinksolverWrapperController {
      * @return the redirect to the resource location
      */
     @GetMapping("/resolve")
-    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) {
+    public RedirectView resolve(@RequestParam MultiValueMap<String, String> requestParams, HttpServletRequest httpServletRequest) throws UnsupportedEncodingException {
 
         this.isDoiUrl = false;
 
